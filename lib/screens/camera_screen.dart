@@ -1,5 +1,8 @@
+import 'package:apptest/screens/image_preview_screen.dart';
+import 'package:apptest/utils/navigation.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 class CamerScreen extends StatefulWidget {
   const CamerScreen({Key? key}) : super(key: key);
@@ -16,17 +19,13 @@ class _CamerScreenState extends State<CamerScreen> with WidgetsBindingObserver {
   CameraDescription? rearCamera;
   bool isRear = false;
   bool isFront = false;
-  bool flashMenu = false;
-  bool timerMenu = false;
-  bool isPhoto = true;
-  bool isVideo = true;
+  // bool flashMenu = false;
+
   bool flashOff = true;
   bool flashOn = false;
   bool flashAuto = false;
   bool flashLight = false;
-  bool isRecording = false;
-  bool showTimer = false;
-  String timer = '0';
+
   XFile? image;
 
   @override
@@ -149,215 +148,135 @@ class _CamerScreenState extends State<CamerScreen> with WidgetsBindingObserver {
       body: SafeArea(
         child: cameraLoaded
             ? Stack(children: [
-                GestureDetector(
-                    onHorizontalDragEnd: (DragEndDetails details) {
-                      if (details.primaryVelocity! > 0) {
-                        // User swiped Left
-                        // setState(() {
-                        //   isPhoto = !isPhoto;
-                        // });
-                        if (isPhoto) {
-                          Navigator.pop(context);
-                        } else if (isVideo) {
-                          setState(() {
-                            isPhoto = true;
-                            isVideo = false;
-                          });
-                        }
-                        // /print('Going Left');
-                      } else if (details.primaryVelocity! < 0) {
-                        // User swiped Right
-
-                        // Navigator.pop(context);
-                        if (isPhoto) {
-                          setState(() {
-                            isVideo = true;
-                            isPhoto = false;
-                          });
-                        }
-                      }
-                    },
-                    child: Container(
-                      width: double.infinity,
-                      child: Transform.scale(
-                        scale: scale,
-                        alignment: Alignment.topCenter,
-                        child: CameraPreview(controller!),
-                      ),
-                    )
-                    // onPanUpdate: (details) {
-                    //   // Swiping in right direction.
-                    //   if (details.delta.dx > 0) {
-                    //     print('Going Right');
-                    //   }
-
-                    //   // Swiping in left direction.
-                    //   if (details.delta.dx < 0) {
-                    //     print('Going Left');
-                    //   }
-                    // },
-                    ),
+                Container(
+                  width: double.infinity,
+                  child: Transform.scale(
+                    scale: scale,
+                    alignment: Alignment.topCenter,
+                    child: CameraPreview(controller!),
+                  ),
+                ),
                 Column(
                   // mainAxisSize: MainAxisSize.min,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+
                   children: [
-                    Column(
-                      children: [
-                        Container(
-                          // height: 200,
-                          padding: EdgeInsets.symmetric(
-                              vertical: 20, horizontal: 20),
-                          color: Colors.white.withOpacity(0.2),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    GestureDetector(
+                      onTap: () => AppNavigation.popScreen(context),
+                      child: Padding(
+                        padding: EdgeInsets.all(20.0),
+                        child: Align(
+                          alignment: Alignment.topLeft,
+                          child: Icon(
+                            Icons.close,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                    Container(
+                      color: Colors.black.withOpacity(0.2),
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
                             children: [
                               GestureDetector(
                                 onTap: () {
                                   setState(() {
-                                    flashMenu = !flashMenu;
-                                    if (timerMenu) {
-                                      timerMenu = false;
+                                    if (flashOff) {
+                                      flashOn = true;
+
+                                      flashOff = false;
+                                    } else {
+                                      flashOn = false;
+
+                                      flashOff = true;
                                     }
+
+                                    // controller?.setFlashMode(FlashMode.always);
                                   });
                                 },
-                                child: Image.asset(
-                                  'assets/images/flash.png',
-                                  height: 20,
-                                ),
+                                child: flashOn
+                                    ? Icon(
+                                        Icons.flash_on,
+                                        color: Colors.white,
+                                      )
+                                    : Icon(
+                                        Icons.flash_off,
+                                        color: Colors.white,
+                                      ),
+                              ),
+                              SizedBox(
+                                height: 15,
                               ),
                               Text(
-                                'HDR',
-                                style: TextStyle(
-                                    fontSize: 16, fontWeight: FontWeight.bold),
-                              ),
-                              GestureDetector(
-                                onTap: () {
-                                  setState(() {
-                                    timerMenu = !timerMenu;
-                                    if (flashMenu) {
-                                      flashMenu = false;
-                                    }
-                                  });
-                                },
-                                child: Image.asset(
-                                  'assets/images/time.png',
-                                  height: 20,
-                                ),
-                              ),
+                                'Camera',
+                                style: TextStyle(color: Colors.white),
+                              )
+                            ],
+                          ),
+                          GestureDetector(
+                            onTap: () async {
+                              if (!flashLight && !flashOff) {
+                                setFlashMode();
+                              }
+
+                              controller?.takePicture().then((img) async {
+                                image = img;
+                                // controller?.setFlashMode(FlashMode.always);
+                                if (!flashLight) {
+                                  controller?.setFlashMode(FlashMode.off);
+                                }
+
+                                AppNavigation.pushToScreen(context,
+                                    screen: ImagePreview(image!));
+                              });
+                            },
+                            child: Container(
+                              height: 50,
+                              width: 50,
+                              decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Colors.transparent,
+                                  border: Border.all(
+                                      color: Colors.white, width: 4)),
+                            ),
+                          ),
+                          Column(
+                            children: [
                               GestureDetector(
                                 onTap: () {
                                   changeCamera();
                                 },
-                                child: Image.asset(
-                                  'assets/images/rotate-camera.png',
-                                  height: 20,
+                                child: Icon(
+                                  Icons.cameraswitch,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              SizedBox(
+                                height: 15,
+                              ),
+                              GestureDetector(
+                                onTap: () async {
+                                  final ImagePicker _picker = ImagePicker();
+                                  final XFile? image = await _picker.pickImage(
+                                      source: ImageSource.gallery);
+                                  if (image != null) {
+                                    AppNavigation.pushToScreen(context,
+                                        screen: ImagePreview(image));
+                                  }
+                                },
+                                child: Text(
+                                  'Gallery',
+                                  style: TextStyle(color: Colors.white),
                                 ),
                               )
                             ],
-                          ),
-                        ),
-                        getFlashMenu(),
-                        getTimerMenu(),
-                      ],
-                    ),
-                    // Visibility(
-                    //   visible: showTimer,
-                    //   child: Countdown(
-                    //       seconds: int.parse(timer),
-                    //       build: (c, n) {
-                    //         return Text(
-                    //           n.ceil().toString(),
-                    //           textScaleFactor: 3.0,
-                    //           style: TextStyle(color: Colors.white),
-                    //         );
-                    //       }),
-                    // ),
-                    Container(
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 20, vertical: 50),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          (isPhoto)
-                              ? Image.asset(
-                                  'assets/images/folder.png',
-                                  height: 30,
-                                )
-                              : Image.asset(
-                                  'assets/images/camera.png',
-                                  height: 30,
-                                ),
-                          isPhoto
-                              ? GestureDetector(
-                                  onTap: () async {
-                                    if (!flashLight && !flashOff) {
-                                      setFlashMode();
-                                    }
-
-                                    controller?.takePicture().then((img) async {
-                                      image = img;
-                                      // controller?.setFlashMode(FlashMode.always);
-                                      if (!flashLight) {
-                                        controller?.setFlashMode(FlashMode.off);
-                                      }
-                                      // showDialog(
-                                      //     context: context,
-                                      //     builder: (c) =>
-                                      //         ImageDialog(File(img.path)));
-                                      // Navigator.push(
-                                      //     context,
-                                      //     MaterialPageRoute(
-                                      //         builder: (c) => ImagePreview(image!)));
-                                    });
-                                  },
-                                  child: Container(
-                                    height: 50,
-                                    width: 50,
-                                    decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: Colors.transparent,
-                                        border: Border.all(
-                                            color: Colors.white, width: 4)),
-                                  ),
-                                )
-                              : (!isRecording)
-                                  ? GestureDetector(
-                                      onTap: () {},
-                                      child: Container(
-                                        height: 50,
-                                        width: 50,
-                                        decoration: BoxDecoration(
-                                            shape: BoxShape.circle,
-                                            color: Colors.red,
-                                            border: Border.all(
-                                                color: Colors.white, width: 4)),
-                                      ),
-                                    )
-                                  : GestureDetector(
-                                      onTap: () {},
-                                      child: Container(
-                                        padding: EdgeInsets.all(10),
-                                        height: 50,
-                                        width: 50,
-                                        decoration: BoxDecoration(
-                                            shape: BoxShape.circle,
-                                            border: Border.all(
-                                                color: Colors.white, width: 4)),
-                                        child: Container(
-                                          color: Colors.red,
-                                          height: 10,
-                                          width: 10,
-                                        ),
-                                      ),
-                                    ),
-                          isPhoto
-                              ? Image.asset(
-                                  'assets/images/video cam.png',
-                                  height: 30,
-                                )
-                              : SizedBox(
-                                  width: 30,
-                                ),
+                          )
                         ],
                       ),
                     )
@@ -370,213 +289,6 @@ class _CamerScreenState extends State<CamerScreen> with WidgetsBindingObserver {
               ),
       ),
     );
-  }
-
-  Widget getFlashMenu() {
-    return Visibility(
-      visible: flashMenu,
-      child: Container(
-        color: Colors.black.withOpacity(0.2),
-        padding: EdgeInsets.symmetric(vertical: 20, horizontal: 20),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            GestureDetector(
-              onTap: () {
-                setState(() {
-                  flashOn = true;
-                  flashAuto = false;
-                  flashOff = false;
-                  flashLight = false;
-                  // controller?.setFlashMode(FlashMode.always);
-                });
-              },
-              child: Column(
-                children: [
-                  Image.asset(
-                    flashOn
-                        ? 'assets/images/flash-on2.png'
-                        : 'assets/images/flash-on.png',
-                    height: 20,
-                  ),
-                  SizedBox(
-                    height: 10,
-                  ),
-                  Text(
-                    'ON',
-                    style: TextStyle(
-                        color: flashOn ? Colors.yellow : Colors.white),
-                  )
-                ],
-              ),
-            ),
-            GestureDetector(
-              onTap: () {
-                setState(() {
-                  flashOn = false;
-                  flashAuto = false;
-                  flashOff = true;
-                  flashLight = false;
-                  controller?.setFlashMode(FlashMode.off);
-                });
-              },
-              child: Column(
-                children: [
-                  Image.asset(
-                    flashOff
-                        ? 'assets/images/flash-off2.png'
-                        : 'assets/images/flash-off.png',
-                    height: 20,
-                  ),
-                  SizedBox(
-                    height: 10,
-                  ),
-                  Text(
-                    'OFF',
-                    style: TextStyle(
-                        color: flashOff ? Colors.yellow : Colors.white),
-                  )
-                ],
-              ),
-            ),
-            GestureDetector(
-              onTap: () {
-                setState(() {
-                  flashOn = false;
-                  flashAuto = true;
-                  flashOff = false;
-                  flashLight = false;
-                  // controller?.setFlashMode(FlashMode.auto);
-                });
-              },
-              child: Column(
-                children: [
-                  Image.asset(
-                    flashAuto
-                        ? 'assets/images/flash-auto2.png'
-                        : 'assets/images/flash-auto.png',
-                    height: 20,
-                  ),
-                  SizedBox(
-                    height: 10,
-                  ),
-                  Text(
-                    'AUTO',
-                    style: TextStyle(
-                        color: flashAuto ? Colors.yellow : Colors.white),
-                  )
-                ],
-              ),
-            ),
-            GestureDetector(
-              onTap: () {
-                setState(() {
-                  flashOn = false;
-                  flashAuto = false;
-                  flashOff = false;
-                  flashLight = true;
-                  controller?.setFlashMode(FlashMode.torch);
-                });
-              },
-              child: Column(
-                children: [
-                  Image.asset(
-                    flashLight
-                        ? 'assets/images/flash-light2.png'
-                        : 'assets/images/flash-light.png',
-                    height: 20,
-                  ),
-                  SizedBox(
-                    height: 10,
-                  ),
-                  Text(
-                    'FLASH',
-                    style: TextStyle(
-                        color: flashLight ? Colors.yellow : Colors.white),
-                  )
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget getTimerMenu() {
-    return Visibility(
-        visible: timerMenu,
-        child: Container(
-          color: Colors.black.withOpacity(0.2),
-          padding: EdgeInsets.symmetric(vertical: 20, horizontal: 20),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              GestureDetector(
-                onTap: () {
-                  setState(() {
-                    timer = '0';
-                  });
-                },
-                child: Text(
-                  '0 sec',
-                  style: TextStyle(
-                      color: timer == '0' ? Colors.yellow : Colors.white),
-                ),
-              ),
-              GestureDetector(
-                onTap: () {
-                  setState(() {
-                    timer = '3';
-                  });
-                },
-                child: Text(
-                  '3 sec',
-                  style: TextStyle(
-                      color: timer == '3' ? Colors.yellow : Colors.white),
-                ),
-              ),
-              GestureDetector(
-                onTap: () {
-                  setState(() {
-                    timer = '5';
-                  });
-                },
-                child: Text(
-                  '5 sec',
-                  style: TextStyle(
-                      color: timer == '5' ? Colors.yellow : Colors.white),
-                ),
-              ),
-              GestureDetector(
-                onTap: () {
-                  setState(() {
-                    timer = '10';
-                  });
-                },
-                child: Text(
-                  '10 sec',
-                  style: TextStyle(
-                      color: timer == '10' ? Colors.yellow : Colors.white),
-                ),
-              )
-            ],
-          ),
-        ));
-  }
-}
-
-class _MediaSizeClipper extends CustomClipper<Rect> {
-  final Size mediaSize;
-  const _MediaSizeClipper(this.mediaSize);
-  @override
-  Rect getClip(Size size) {
-    return Rect.fromLTWH(0, 0, mediaSize.width, mediaSize.height);
-  }
-
-  @override
-  bool shouldReclip(CustomClipper<Rect> oldClipper) {
-    return true;
   }
 }
 
